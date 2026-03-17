@@ -99,5 +99,5 @@ router.post("/login", async (req, res) => {
 		}
 	}
 
-    res.status(401).json({ msg: "invalide username or password" });
+    res.status(401).json({ msg: "invalid username or password" });
 });
