@@ -1,157 +1,168 @@
 import {
-	Avatar,
-	Box,
-	Button,
-	ButtonGroup,
-	Card,
-	IconButton,
-	Typography,
+    Avatar,
+    Box,
+    Button,
+    Card,
+    IconButton,
+    Typography,
+    Stack,
+    Divider,
+    Tooltip
 } from "@mui/material";
 
-import { green, grey, red } from "@mui/material/colors";
+import { green, grey, red, blue } from "@mui/material/colors";
 
 import {
-	FavoriteBorderOutlined as LikeIcon,
-	Favorite as LikedIcon,
-	ChatBubbleOutline as CommentIcon,
-	Delete as DeleteIcon,
+    FavoriteBorderOutlined as LikeIcon,
+    Favorite as LikedIcon,
+    ChatBubbleOutline as CommentIcon,
+    DeleteOutline as DeleteIcon,
 } from "@mui/icons-material";
 
 import { useNavigate } from "react-router";
 import { useApp } from "../AppProvider";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 
 export default function Post({ post, onDelete }) {
-	const navigate = useNavigate();
-	const { auth } = useApp();
-	const queryClient = useQueryClient();
+    const navigate = useNavigate();
+    const { auth } = useApp();
+    const queryClient = useQueryClient();
 
-	const handleDelete = async () => {
-		if (!confirm("Are you sure you want to delete this post?")) {
-			return;
-		}
+    // Delete Mutation
+    const deleteMutation = useMutation({
+        mutationFn: async () => {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${post.id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error("Failed to delete post");
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(["posts"]);
+            if (onDelete) onDelete();
+        },
+        onError: (err) => alert(err.message)
+    });
 
-		const token = localStorage.getItem("token");
-		const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${post.id}`, {
-			method: "DELETE",
-			headers: {
-				Authorization: `Bearer ${token}`,
-			},
-		});
+    // Like Mutation
+    const likeMutation = useMutation({
+        mutationFn: async () => {
+            const token = localStorage.getItem("token");
+            const method = isLiked ? "DELETE" : "POST";
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${post.id}/like`, {
+                method,
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error("Failed to update like");
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(["posts"]);
+            if (onDelete) {
+                queryClient.invalidateQueries(["posts", post.id.toString()]);
+            }
+        }
+    });
 
-		if (res.ok) {
-			// Invalidate queries to refresh the posts list
-			queryClient.invalidateQueries(["posts"]);
-			// Call onDelete callback if provided (for single post view)
-			if (onDelete) {
-				onDelete();
-			}
-		} else {
-			const error = await res.json();
-			alert(error.msg || "Failed to delete post");
-		}
-	};
+    const isLiked = auth && post.likes?.some(like => like.userId === auth.id);
+    const likeCount = post._count?.likes || post.likes?.length || 0;
 
-	// Check if current user has liked this post
-	const isLiked = auth && post.likes?.some(like => like.userId === auth.id);
-	const likeCount = post._count?.likes || post.likes?.length || 0;
+    return (
+        <Card elevation={0} sx={{ 
+            mb: 2, 
+            p: 2.5, 
+            borderRadius: 3, 
+            border: "1px solid",
+            borderColor: "divider",
+            "&:hover": { boxShadow: "0 4px 12px rgba(0,0,0,0.05)" },
+            transition: "box-shadow 0.2s"
+        }}>
+            <Box sx={{ display: "flex", gap: 2 }}>
+                <Avatar
+                    sx={{ 
+                        width: 48, 
+                        height: 48, 
+                        bgcolor: "primary.main",
+                        cursor: "pointer" 
+                    }}
+                    onClick={() => navigate(`/profile/${post.userId}`)}
+                >
+                    {post.user.name[0].toUpperCase()}
+                </Avatar>
+                
+                <Box sx={{ flexGrow: 1 }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                        <Box>
+                            <Typography variant="subtitle1" sx={{ fontWeight: "bold", lineHeight: 1.2 }}>
+                                {post.user.name}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                                {post.createdAt}
+                            </Typography>
+                        </Box>
+                        
+                        {auth && auth.id === post.userId && (
+                            <IconButton 
+                                size="small" 
+                                onClick={() => {
+                                    if(window.confirm("Delete this post?")) deleteMutation.mutate();
+                                }}
+                                disabled={deleteMutation.isPending}
+                                sx={{ color: grey[400], "&:hover": { color: red[500] } }}
+                            >
+                                <DeleteIcon fontSize="small" />
+                            </IconButton>
+                        )}
+                    </Stack>
 
-	const handleLike = async () => {
-		if (!auth) {
-			alert("Please login to like posts");
-			return;
-		}
+                    <Typography 
+                        variant="body1"
+                        onClick={() => navigate(`/view/${post.id}`)}
+                        sx={{ 
+                            cursor: "pointer", 
+                            mt: 1.5, 
+                            mb: 2,
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word"
+                        }}
+                    >
+                        {post.content}
+                    </Typography>
+                </Box>
+            </Box>
 
-		const token = localStorage.getItem("token");
-		const method = isLiked ? "DELETE" : "POST";
-		
-		const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${post.id}/like`, {
-			method,
-			headers: {
-				Authorization: `Bearer ${token}`,
-			},
-		});
+            <Divider sx={{ opacity: 0.6 }} />
 
-		if (res.ok) {
-			// Invalidate queries to refresh the posts
-			queryClient.invalidateQueries(["posts"]);
-			if (onDelete) { // This means we're in single post view
-				queryClient.invalidateQueries(["posts", post.id.toString()]);
-			}
-		} else {
-			const error = await res.json();
-			alert(error.msg || "Failed to update like");
-		}
-	};
+            <Stack direction="row" spacing={1} sx={{ mt: 1, justifyContent: "space-around" }}>
+                <Button 
+                    startIcon={isLiked ? <LikedIcon sx={{ color: red[500] }} /> : <LikeIcon />}
+                    onClick={() => auth ? likeMutation.mutate() : alert("Please login")}
+                    sx={{ 
+                        color: isLiked ? red[500] : "text.secondary",
+                        textTransform: "none",
+                        fontWeight: isLiked ? "bold" : "normal",
+                        flex: 1,
+                        borderRadius: 2
+                    }}
+                >
+                    {likeCount > 0 ? likeCount : "Like"}
+                </Button>
 
-	return (
-		<Card sx={{ mb: 2, p: 3 }}>
-			<Box sx={{ display: "flex", gap: 2 }}>
-				<Box>
-					<Avatar
-						sx={{ width: 52, height: 52, background: green[500] }}>
-						{post.user.name[0]}
-					</Avatar>
-				</Box>
-				<Box sx={{ flexGrow: 1 }}>
-					<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-						<Box>
-							<Typography>{post.user.name}</Typography>
-							<Typography sx={{ color: green[500] }}>
-								{post.createdAt}
-							</Typography>
-						</Box>
-						{auth && auth.id === post.userId && (
-							<IconButton 
-								size="small" 
-								onClick={handleDelete}
-								sx={{ color: red[500] }}
-							>
-								<DeleteIcon />
-							</IconButton>
-						)}
-					</Box>
-					<Typography 
-						onClick={() => navigate(`/view/${post.id}`)}
-						sx={{ cursor: "pointer", mt: 1 }}
-					>
-						{post.content}
-					</Typography>
-				</Box>
-			</Box>
-			<Box
-				sx={{ display: "flex", justifyContent: "space-around", mt: 2 }}>
-				<ButtonGroup>
-					<IconButton 
-						size="sm" 
-						onClick={handleLike}
-						disabled={!auth}
-					>
-						{isLiked ? (
-							<LikedIcon sx={{ color: red[500] }} />
-						) : (
-							<LikeIcon sx={{ color: auth ? red[500] : grey[400] }} />
-						)}
-					</IconButton>
-					<Button
-						size="sm"
-						variant="text"
-						sx={{ color: isLiked ? red[500] : "inherit" }}
-					>
-						{likeCount}
-					</Button>
-				</ButtonGroup>
-				<ButtonGroup>
-					<IconButton size="sm">
-						<CommentIcon sx={{ color: grey[500] }} />
-					</IconButton>
-					<Button
-						size="sm"
-						variant="text">
-						{post.comments.length}
-					</Button>
-				</ButtonGroup>
-			</Box>
-		</Card>
-	);
+                <Button 
+                    startIcon={<CommentIcon />}
+                    onClick={() => navigate(`/view/${post.id}`)}
+                    sx={{ 
+                        color: "text.secondary",
+                        textTransform: "none",
+                        flex: 1,
+                        borderRadius: 2
+                    }}
+                >
+                    {post.comments?.length > 0 ? post.comments.length : "Comment"}
+                </Button>
+            </Stack>
+        </Card>
+    );
 }

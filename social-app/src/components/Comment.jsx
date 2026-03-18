@@ -1,75 +1,121 @@
-import { Avatar, Box, Typography, IconButton } from "@mui/material";
+import { 
+    Avatar, 
+    Box, 
+    Typography, 
+    IconButton, 
+    Paper, 
+    Stack, 
+    Tooltip 
+} from "@mui/material";
 import { grey, red } from "@mui/material/colors";
 import { Delete as DeleteIcon } from "@mui/icons-material";
 
-import { useNavigate } from "react-router";
 import { useApp } from "../AppProvider";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns"; 
 
 export default function Comment({ comment, postId }) {
-	const navigate = useNavigate();
-	const { auth } = useApp();
-	const queryClient = useQueryClient();
+    const { auth } = useApp();
+    const queryClient = useQueryClient();
 
-	const handleDelete = async () => {
-		if (!confirm("Are you sure you want to delete this comment?")) {
-			return;
-		}
+    
+    const deleteMutation = useMutation({
+        mutationFn: async () => {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/comments/${comment.id}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            if (!res.ok) throw new Error("Failed to delete comment");
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries(["posts", postId]);
+        },
+        onError: (err) => {
+            alert(err.message);
+        }
+    });
 
-		const token = localStorage.getItem("token");
-		const res = await fetch(`${import.meta.env.VITE_API_URL}/comments/${comment.id}`, {
-			method: "DELETE",
-			headers: {
-				Authorization: `Bearer ${token}`,
-			},
-		});
+    const handleDelete = () => {
+        if (window.confirm("Are you sure you want to delete this comment?")) {
+            deleteMutation.mutate();
+        }
+    };
 
-		if (res.ok) {
-			// Invalidate the specific post query to refresh comments
-			queryClient.invalidateQueries(["posts", postId]);
-		} else {
-			const error = await res.json();
-			alert(error.msg || "Failed to delete comment");
-		}
-	};
+    return (
+        <Box sx={{ mb: 2, display: "flex", gap: 1.5 }}>
+            {/* User Avatar */}
+            <Avatar
+                sx={{ 
+                    width: 36, 
+                    height: 36, 
+                    fontSize: "0.9rem",
+                    bgcolor: grey[400],
+                    boxShadow: 1
+                }}
+            >
+                {comment.user.name[0].toUpperCase()}
+            </Avatar>
 
-	return (
-		<Box
-			sx={{
-				mb: 2,
-				p: 3,
-				border: "1px solid #99999920",
-			}}>
-			<Box sx={{ display: "flex", gap: 2 }}>
-				<Box>
-					<Avatar
-						sx={{ width: 48, height: 48, background: grey[500] }}>
-						{comment.user.name[0]}
-					</Avatar>
-				</Box>
-				<Box sx={{ flexGrow: 1 }}>
-					<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-						<Box>
-							<Typography>{comment.user.name}</Typography>
-							<Typography sx={{ color: grey[500] }}>
-								{comment.createdAt}
-							</Typography>
-						</Box>
-						{auth && auth.id === comment.userId && (
-							<IconButton 
-								size="small" 
-								onClick={handleDelete}
-								sx={{ color: red[500] }}
-							>
-								<DeleteIcon />
-							</IconButton>
-						)}
-					</Box>
-					<Typography sx={{ mt: 1 }}>
-						{comment.content}
-					</Typography>
-				</Box>
-			</Box>
-		</Box>
-	);
+            {/* Comment Bubble */}
+            <Box sx={{ flexGrow: 1 }}>
+                <Paper 
+                    elevation={0}
+                    sx={{ 
+                        p: 1.5, 
+                        px: 2,
+                        borderRadius: 3, 
+                        bgcolor: "action.hover", 
+                        position: "relative"
+                    }}
+                >
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: "bold", fontSize: "0.85rem" }}>
+                            {comment.user.name}
+                        </Typography>
+
+                        {auth && auth.id === comment.userId && (
+                            <Tooltip title="Delete Comment">
+                                <IconButton 
+                                    size="small" 
+                                    onClick={handleDelete}
+                                    disabled={deleteMutation.isPending}
+                                    sx={{ 
+                                        color: grey[400], 
+                                        "&:hover": { color: red[500] },
+                                        p: 0,
+                                        ml: 1
+                                    }}
+                                >
+                                    <DeleteIcon sx={{ fontSize: "1.1rem" }} />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                    </Box>
+
+                    <Typography variant="body2" sx={{ mt: 0.5, color: "text.primary", lineHeight: 1.4 }}>
+                        {comment.content}
+                    </Typography>
+                </Paper>
+
+                {/* Date/Time info under the bubble */}
+                <Typography 
+                    variant="caption" 
+                    sx={{ 
+                        ml: 1.5, 
+                        mt: 0.5, 
+                        display: "block", 
+                        color: "text.secondary",
+                        fontSize: "0.7rem" 
+                    }}
+                >
+                    
+                    {comment.createdAt}
+                </Typography>
+            </Box>
+        </Box>
+    );
 }
