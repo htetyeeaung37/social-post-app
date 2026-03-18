@@ -7,7 +7,7 @@ import { useApp } from "../AppProvider";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 
-const api = "http://localhost:8800/posts";
+const api = `${import.meta.env.VITE_API_URL}/posts`;
 
 export default function Home() {
 	const inputRef = useRef();

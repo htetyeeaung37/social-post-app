@@ -21,7 +21,7 @@ import { useNavigate } from "react-router";
 import { useEffect } from "react";
 import Post from "../components/Post";
 
-const api = "http://localhost:8800/users/profile";
+const api = `${import.meta.env.VITE_API_URL}/users/profile`;
 
 export default function Profile() {
 	const { auth } = useApp();

@@ -6,7 +6,7 @@ import { useNavigate } from "react-router";
 
 import { useApp } from "../AppProvider";
 
-const api = "http://localhost:8800/users/login";
+const api = `${import.meta.env.VITE_API_URL}/users/login`;
 
 export default function Login() {
 	const [error, setError] = useState(false);

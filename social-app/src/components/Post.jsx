@@ -32,7 +32,7 @@ export default function Post({ post, onDelete }) {
 		}
 
 		const token = localStorage.getItem("token");
-		const res = await fetch(`http://localhost:8800/posts/${post.id}`, {
+		const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${post.id}`, {
 			method: "DELETE",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -65,7 +65,7 @@ export default function Post({ post, onDelete }) {
 		const token = localStorage.getItem("token");
 		const method = isLiked ? "DELETE" : "POST";
 		
-		const res = await fetch(`http://localhost:8800/posts/${post.id}/like`, {
+		const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${post.id}/like`, {
 			method,
 			headers: {
 				Authorization: `Bearer ${token}`,

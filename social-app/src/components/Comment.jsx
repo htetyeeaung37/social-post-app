@@ -17,7 +17,7 @@ export default function Comment({ comment, postId }) {
 		}
 
 		const token = localStorage.getItem("token");
-		const res = await fetch(`http://localhost:8800/comments/${comment.id}`, {
+		const res = await fetch(`${import.meta.env.VITE_API_URL}/comments/${comment.id}`, {
 			method: "DELETE",
 			headers: {
 				Authorization: `Bearer ${token}`,

@@ -11,7 +11,7 @@ const AppContext = createContext();
 
 const queryClient = new QueryClient();
 
-const api = "http://localhost:8800/users/verify";
+const api = `${import.meta.env.VITE_API_URL}/users/verify`;
 const token = localStorage.getItem("token");
 
 export default function AppPovider() {

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 
 import { useNavigate } from "react-router";
 
-const api = "http://localhost:8800/users";
+const api = `${import.meta.env.VITE_API_URL}/users`;
 
 export default function Register() {
 	const [error, setError] = useState();
