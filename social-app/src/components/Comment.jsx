@@ -116,7 +116,7 @@ export default function Comment({ comment, postId }) {
         </Paper>
 
         {/* Date/Time info under the bubble */}
-        <Typography
+        {/* <Typography
           variant="caption"
           sx={{
             ml: 1.5,
@@ -129,7 +129,7 @@ export default function Comment({ comment, postId }) {
           {formatDistanceToNow(new Date(comment.createdAt), {
             addSuffix: true,
           })}
-        </Typography>
+        </Typography> */}
       </Box>
     </Box>
   );
